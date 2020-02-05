@@ -21,6 +21,7 @@ cd "${BASE_DIR}"
 
 ## load configuration needed for setup
 REQUIRED_FILES=("webroot/auth.json")
+REQUIRED_DIRECTORIES=("webroot/pub/media")
 source .env
 DB_DUMP="${DB_DUMP:-/tmp/magento-db.sql.gz}"
 DB_IMPORT=1
@@ -108,6 +109,11 @@ for REQUIRED_FILE in ${REQUIRED_FILES[@]}; do
     >&2 printf "\e[01;31mERROR\033[0m: Missing local file: ${REQUIRED_FILE} \n"
     INIT_ERROR=1
   fi
+done
+
+## ensure required directories exist
+for REQUIRED_DIRECTORY in ${REQUIRED_DIRECTORIES[@]}; do
+  mkdir -p ${REQUIRED_DIRECTORY}
 done
 
 ## exit script if there are any missing dependencies or configuration files
