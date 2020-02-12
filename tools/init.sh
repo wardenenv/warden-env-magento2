@@ -91,6 +91,19 @@ then
   INIT_ERROR=1
 fi
 
+## copy global Marketplace credentials into webroot to satisfy REQUIRED_FILES list; in ideal
+## configuration the per-project auth.json will already exist with project specific keys
+if [[ ! -f "webroot/auth.json" ]] && [[ -f ~/.composer/auth.json ]]; then
+  if docker run --rm -v ~/.composer/auth.json:/tmp/auth.json \
+      composer config -g http-basic.repo.magento.com >/dev/null 2>&1
+  then
+    >&2 printf "\e[01;31mNOTICE\033[0m: Configuring ./webroot/auth.json with global credentials for repo.magento.com \n"
+    echo "{\"http-basic\":{\"repo.magento.com\":$(
+      docker run --rm -v ~/.composer/auth.json:/tmp/auth.json composer config -g http-basic.repo.magento.com
+    )}}" > ./webroot/auth.json
+  fi
+fi
+
 ## verify mutagen version constraint
 MUTAGEN_VERSION=$(mutagen version 2>/dev/null) || true
 if [[ $OSTYPE =~ ^darwin ]] && ! { \
