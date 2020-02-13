@@ -91,6 +91,12 @@ then
   INIT_ERROR=1
 fi
 
+## verify docker is running
+if ! docker system info >/dev/null 2>&1; then
+    >&2 printf "\e[01;31mERROR\033[0m: Docker does not appear to be running. Please start Docker.\n"
+    INIT_ERROR=1
+fi
+
 ## copy global Marketplace credentials into webroot to satisfy REQUIRED_FILES list; in ideal
 ## configuration the per-project auth.json will already exist with project specific keys
 if [[ ! -f "webroot/auth.json" ]] && [[ -f ~/.composer/auth.json ]]; then
