@@ -20,8 +20,9 @@ readonly BASE_DIR="$(
 cd "${BASE_DIR}"
 
 ## load configuration needed for setup
-REQUIRED_FILES=("webroot/auth.json")
 source .env
+WARDEN_WEB_ROOT="$(echo "${WARDEN_WEB_ROOT:-/}" | sed 's#^/#./#')"
+REQUIRED_FILES=("${WARDEN_WEB_ROOT}/auth.json")
 DB_DUMP="${DB_DUMP:-/tmp/magento-db.sql.gz}"
 DB_IMPORT=1
 CLEAN_INSTALL=
@@ -63,7 +64,7 @@ while (( "$#" )); do
 done
 
 ## include check for DB_DUMP file only when database import is expected
-[[ ${DB_IMPORT} ]] && REQUIRED_FILES+=("${DB_DUMP}" "webroot/app/etc/env.php.warden.php")
+[[ ${DB_IMPORT} ]] && REQUIRED_FILES+=("${DB_DUMP}" "${WARDEN_WEB_ROOT}/app/etc/env.php.warden.php")
 
 :: Verifying configuration
 INIT_ERROR=
@@ -99,14 +100,15 @@ fi
 
 ## copy global Marketplace credentials into webroot to satisfy REQUIRED_FILES list; in ideal
 ## configuration the per-project auth.json will already exist with project specific keys
-if [[ ! -f "webroot/auth.json" ]] && [[ -f ~/.composer/auth.json ]]; then
+if [[ ! -f "${WARDEN_WEB_ROOT}/auth.json" ]] && [[ -f ~/.composer/auth.json ]]; then
   if docker run --rm -v ~/.composer/auth.json:/tmp/auth.json \
       composer config -g http-basic.repo.magento.com >/dev/null 2>&1
   then
-    >&2 printf "\e[01;31mNOTICE\033[0m: Configuring ./webroot/auth.json with global credentials for repo.magento.com \n"
+    >&2 printf \
+      "\e[01;31mNOTICE\033[0m: Configuring ${WARDEN_WEB_ROOT}/auth.json with global credentials for repo.magento.com \n"
     echo "{\"http-basic\":{\"repo.magento.com\":$(
       docker run --rm -v ~/.composer/auth.json:/tmp/auth.json composer config -g http-basic.repo.magento.com
-    )}}" > ./webroot/auth.json
+    )}}" > ${WARDEN_WEB_ROOT}/auth.json
   fi
 fi
 
