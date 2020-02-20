@@ -114,7 +114,7 @@ fi
 
 ## verify mutagen version constraint
 MUTAGEN_VERSION=$(mutagen version 2>/dev/null) || true
-if ! { \
+if [[ $OSTYPE =~ ^darwin ]] && ! { \
      (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) >= 1 )) \
   || (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) == 0 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f2) >= 11 )) \
   || (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) == 0 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f2) == 10 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f3) >= 3 )); }
