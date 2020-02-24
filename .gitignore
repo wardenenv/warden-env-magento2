@@ -7,6 +7,7 @@
 .settings
 *.log
 *.sql.gz
+*.tar.gz
 node_modules
 
 /webroot/*
