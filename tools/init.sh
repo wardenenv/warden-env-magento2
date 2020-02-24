@@ -34,6 +34,7 @@ URL_ADMIN="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/backend/"
 while (( "$#" )); do
     case "$1" in
         --clean-install)
+            REQUIRED_FILES+=("${WARDEN_WEB_ROOT}/app/etc/env.php.init.php")
             CLEAN_INSTALL=1
             DB_IMPORT=
             shift
