@@ -23,7 +23,7 @@ cd "${BASE_DIR}"
 source .env
 WARDEN_WEB_ROOT="$(echo "${WARDEN_WEB_ROOT:-/}" | sed 's#^/#./#')"
 REQUIRED_FILES=("${WARDEN_WEB_ROOT}/auth.json")
-DB_DUMP="${DB_DUMP:-/tmp/magento-db.sql.gz}"
+DB_DUMP="${DB_DUMP:-./backfill/magento-db.sql.gz}"
 DB_IMPORT=1
 CLEAN_INSTALL=
 URL_FRONT="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/"
