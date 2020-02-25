@@ -1,10 +1,24 @@
 #!/usr/bin/env bash
 set -eu
-trap '>&2 printf "\n\e[01;31mERROR\033[0m: Command \`%s\` on line $LINENO failed with exit code $?\n" "$BASH_COMMAND"' ERR
+trap 'error "$(printf "Command \`%s\` on line $LINENO failed with exit code $?" "$BASH_COMMAND")"' ERR
+
+## setup messaging functions for use throughout the script
+function warning {
+  >&2 printf "\033[33mWARNING\033[0m: $@\n" 
+}
+
+function error {
+  >&2 printf "\033[31mERROR\033[0m: $@\n"
+}
+
+function fatal {
+  error "$@"
+  exit -1
+}
 
 function :: {
-    echo
-    echo "==> [$(date +%H:%M:%S)] $@"
+  echo
+  echo "==> [$(date +%H:%M:%S)] $@"
 }
 
 ## find directory above where this script is located following symlinks if neccessary
@@ -58,7 +72,7 @@ while (( "$#" )); do
             exit -1
             ;;
         *)
-            >&2 printf "\e[01;31mERROR\033[0m: Unrecognized argument '$1'\n"
+            error "Unrecognized argument '$1'"
             exit -1
             ;;
     esac
@@ -72,7 +86,7 @@ INIT_ERROR=
 
 ## attempt to install mutagen if not already present
 if [[ $OSTYPE =~ ^darwin ]] && ! which mutagen 2>/dev/null >/dev/null && which brew 2>/dev/null >/dev/null; then
-    >&2 printf "\033[33mWARNING\033[0m: Mutagen could not be found; attempting install via brew.\n"
+    warning "Mutagen could not be found; attempting install via brew."
     brew install havoc-io/mutagen/mutagen
 fi
 
@@ -83,7 +97,7 @@ for DEP_NAME in warden mutagen docker-compose pv; do
   fi
 
   if ! which "${DEP_NAME}" 2>/dev/null >/dev/null; then
-    >&2 printf "\e[01;31mERROR\033[0m: Command '${DEP_NAME}' not found. Please install.\n"
+    error "Command '${DEP_NAME}' not found. Please install."
     INIT_ERROR=1
   fi
 done
@@ -95,13 +109,13 @@ if ! { \
   && (( $(echo ${WARDEN_VERSION:-0} | cut -d. -f2) >= 2 )) \
   && (( $(echo ${WARDEN_VERSION:-0} | cut -d. -f3) >= 0 )); }
 then
-  >&2 printf "\e[01;31mERROR\033[0m: Warden 0.2.0 or greater is required (version ${WARDEN_VERSION} is installed)\n"
+  error "Warden 0.2.0 or greater is required (version ${WARDEN_VERSION} is installed)"
   INIT_ERROR=1
 fi
 
 ## verify docker is running
 if ! docker system info >/dev/null 2>&1; then
-    >&2 printf "\e[01;31mERROR\033[0m: Docker does not appear to be running. Please start Docker.\n"
+    error "Docker does not appear to be running. Please start Docker."
     INIT_ERROR=1
 fi
 
@@ -111,8 +125,7 @@ if [[ ! -f "${WARDEN_WEB_ROOT}/auth.json" ]] && [[ -f ~/.composer/auth.json ]]; 
   if docker run --rm -v ~/.composer/auth.json:/tmp/auth.json \
       composer config -g http-basic.repo.magento.com >/dev/null 2>&1
   then
-    >&2 printf \
-      "\e[01;31mNOTICE\033[0m: Configuring ${WARDEN_WEB_ROOT}/auth.json with global credentials for repo.magento.com \n"
+    warning "Configuring ${WARDEN_WEB_ROOT}/auth.json with global credentials for repo.magento.com"
     echo "{\"http-basic\":{\"repo.magento.com\":$(
       docker run --rm -v ~/.composer/auth.json:/tmp/auth.json composer config -g http-basic.repo.magento.com
     )}}" > ${WARDEN_WEB_ROOT}/auth.json
@@ -126,14 +139,14 @@ if [[ $OSTYPE =~ ^darwin ]] && ! { \
   || (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) == 0 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f2) >= 11 )) \
   || (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) == 0 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f2) == 10 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f3) >= 3 )); }
 then
-  >&2 printf "\e[01;31mERROR\033[0m: Mutagen 0.10.3 or greater is required (version ${MUTAGEN_VERSION} is installed)\n"
+  error "Mutagen 0.10.3 or greater is required (version ${MUTAGEN_VERSION} is installed)"
   INIT_ERROR=1
 fi
 
 ## check for presence of local configuration files to ensure they exist
 for REQUIRED_FILE in ${REQUIRED_FILES[@]}; do
   if [[ ! -f "${REQUIRED_FILE}" ]]; then
-    >&2 printf "\e[01;31mERROR\033[0m: Missing local file: ${REQUIRED_FILE} \n"
+    error "Missing local file: ${REQUIRED_FILE}"
     INIT_ERROR=1
   fi
 done
