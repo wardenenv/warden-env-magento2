@@ -70,6 +70,12 @@ done
 :: Verifying configuration
 INIT_ERROR=
 
+## attempt to install mutagen if not already present
+if [[ $OSTYPE =~ ^darwin ]] && ! which mutagen 2>/dev/null >/dev/null && which brew 2>/dev/null >/dev/null; then
+    >&2 printf "\033[33mWARNING\033[0m: Mutagen could not be found; attempting install via brew.\n"
+    brew install havoc-io/mutagen/mutagen
+fi
+
 ## check for presence of host machine dependencies
 for DEP_NAME in warden mutagen docker-compose pv; do
   if [[ "${DEP_NAME}" = "mutagen" ]] && [[ ! $OSTYPE =~ ^darwin ]]; then
