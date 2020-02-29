@@ -16,6 +16,10 @@ function fatal {
   exit -1
 }
 
+function version {
+  echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+}
+
 function :: {
   echo
   echo "==> [$(date +%H:%M:%S)] $@"
@@ -104,12 +108,9 @@ done
 
 ## verify warden version constraint
 WARDEN_VERSION=$(warden version 2>/dev/null) || true
-if ! { \
-     (( $(echo ${WARDEN_VERSION:-0} | cut -d. -f1) >= 0 )) \
-  && (( $(echo ${WARDEN_VERSION:-0} | cut -d. -f2) >= 2 )) \
-  && (( $(echo ${WARDEN_VERSION:-0} | cut -d. -f3) >= 0 )); }
-then
-  error "Warden 0.2.0 or greater is required (version ${WARDEN_VERSION} is installed)"
+WARDEN_REQUIRE=0.2.0
+if ! test $(version ${WARDEN_VERSION}) -ge $(version ${WARDEN_REQUIRE}); then
+  error "Warden ${WARDEN_REQUIRE} or greater is required (version ${WARDEN_VERSION} is installed)"
   INIT_ERROR=1
 fi
 
@@ -134,12 +135,9 @@ fi
 
 ## verify mutagen version constraint
 MUTAGEN_VERSION=$(mutagen version 2>/dev/null) || true
-if [[ $OSTYPE =~ ^darwin ]] && ! { \
-     (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) >= 1 )) \
-  || (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) == 0 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f2) >= 11 )) \
-  || (( $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f1) == 0 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f2) == 10 && $(echo ${MUTAGEN_VERSION:-0} | cut -d. -f3) >= 3 )); }
-then
-  error "Mutagen 0.10.3 or greater is required (version ${MUTAGEN_VERSION} is installed)"
+MUTAGEN_REQUIRE=0.10.3
+if [[ $OSTYPE =~ ^darwin ]] && ! test $(version ${MUTAGEN_VERSION}) -ge $(version ${MUTAGEN_REQUIRE}); then
+  error "Mutagen ${MUTAGEN_REQUIRE} or greater is required (version ${MUTAGEN_VERSION} is installed)"
   INIT_ERROR=1
 fi
 
