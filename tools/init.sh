@@ -2,7 +2,7 @@
 set -eu
 trap 'error "$(printf "Command \`%s\` on line $LINENO failed with exit code $?" "$BASH_COMMAND")"' ERR
 
-## setup messaging functions for use throughout the script
+## setup functions for use throughout the script
 function warning {
   >&2 printf "\033[33mWARNING\033[0m: $@\n" 
 }
@@ -44,6 +44,8 @@ REQUIRED_FILES=("${WARDEN_WEB_ROOT}/auth.json")
 DB_DUMP="${DB_DUMP:-./backfill/magento-db.sql.gz}"
 DB_IMPORT=1
 CLEAN_INSTALL=
+META_PACKAGE="magento/project-community-edition"
+META_VERSION=""
 URL_FRONT="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/"
 URL_ADMIN="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/backend/"
 
@@ -57,6 +59,22 @@ while (( "$#" )); do
             DB_IMPORT=
             shift
             ;;
+        --meta-package)
+            shift
+            META_PACKAGE="$1"
+            shift
+            ;;
+        --meta-version)
+            shift
+            META_VERSION="$1"
+            if
+                ! test $(version "${META_VERSION}") -ge "$(version 2.3.4)" \
+                && [[ ! "${META_VERSION}" =~ ^2\.[3-9]\.x$ ]]
+            then
+                fatal "Invalid --meta-version=${META_VERSION} specified (valid values are 2.3.4 or later and 2.[3-9].x)"
+            fi
+            shift
+            ;;
         --skip-db-import)
             DB_IMPORT=
             shift
@@ -66,10 +84,15 @@ while (( "$#" )); do
             DB_DUMP="$1"
             shift
             ;;
-        --help)
+        -h|--help)
             echo "Usage: $(basename $0) [--skip-db-import] [--db-dump <file>.sql.gz]"
             echo ""
-            echo "       --clean-install              install from scratch rather than use existing database dump" 
+            echo "       --clean-install              install from scratch rather than use existing database dump;"
+            echo "                                    implied when no composer.json file is present in web root" 
+            echo "       --meta-package               passed to 'composer create-project' when --clean-install is"
+            echo "                                    specified and defaults to 'magento/project-community-edition'"
+            echo "       --meta-version               specify alternate version to install; defaults to latest; may"
+            echo "                                    be (for example) specified as 2.3.x (latest minor) or 2.3.4"
             echo "       --skip-db-import             skips over db import (assume db has already been imported)"
             echo "       --db-dump <file>.sql.gz      expects path to .sql.gz file for import during init"
             echo ""
@@ -81,6 +104,14 @@ while (( "$#" )); do
             ;;
     esac
 done
+
+## if no composer.json is present in web root imply --clean-install flag when not specified explicitly
+if [[ ! ${CLEAN_INSTALL} ]] && [[ ! -f "${WARDEN_WEB_ROOT}/composer.json" ]]; then
+  warning "Implying --clean-install since file ${WARDEN_WEB_ROOT}/composer.json not present"
+  REQUIRED_FILES+=("${WARDEN_WEB_ROOT}/app/etc/env.php.init.php")
+  CLEAN_INSTALL=1
+  DB_IMPORT=
+fi
 
 ## include check for DB_DUMP file only when database import is expected
 [[ ${DB_IMPORT} ]] && REQUIRED_FILES+=("${DB_DUMP}" "${WARDEN_WEB_ROOT}/app/etc/env.php.warden.php")
@@ -169,6 +200,13 @@ warden shell -c "while ! nc -z db 3306 </dev/null; do sleep 2; done"
 ## start sync session only on macOS systems
 if [[ $OSTYPE =~ ^darwin ]]; then
   warden sync start
+fi
+
+if [[ ${CLEAN_INSTALL} ]] && [[ ! -f "${WARDEN_WEB_ROOT}/composer.json" ]]; then
+  :: Installing meta-package
+  warden env exec -T php-fpm composer create-project -q --no-interaction --prefer-dist --no-install \
+      --repository-url=https://repo.magento.com/ "${META_PACKAGE}" /tmp/create-project "${META_VERSION}"
+  warden env exec -T php-fpm rsync -a /tmp/create-project/ /var/www/html/
 fi
 
 :: Installing dependencies
