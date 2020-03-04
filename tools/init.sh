@@ -197,8 +197,8 @@ warden env up -d
 ## wait for mariadb to start listening for connections
 warden shell -c "while ! nc -z db 3306 </dev/null; do sleep 2; done"
 
-## start sync session only on macOS systems
-if [[ $OSTYPE =~ ^darwin ]]; then
+## start sync session on macOS where Warden is too old to automatically start mutagen sync
+if [[ $OSTYPE =~ ^darwin ]] && test $(version ${WARDEN_VERSION}) -lt $(version 0.3.0); then
   warden sync start
 fi
 
