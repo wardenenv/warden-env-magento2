@@ -190,7 +190,7 @@ if [[ ! -f ~/.warden/ssl/certs/${TRAEFIK_DOMAIN}.crt.pem ]]; then
 fi
 
 :: Initializing environment
-warden env pull --ignore-pull-failures    # With an overriden image on php-fpm container, there will be pull failures
+warden env pull --ignore-pull-failures || true
 warden env build --pull
 warden env up -d
 
