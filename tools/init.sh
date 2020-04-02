@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eu
+set -euo pipefail
 trap 'error "$(printf "Command \`%s\` on line $LINENO failed with exit code $?" "$BASH_COMMAND")"' ERR
 
 ## setup functions for use throughout the script
