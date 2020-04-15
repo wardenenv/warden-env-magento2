@@ -139,7 +139,7 @@ done
 
 ## verify warden version constraint
 WARDEN_VERSION=$(warden version 2>/dev/null) || true
-WARDEN_REQUIRE=0.4.0
+WARDEN_REQUIRE=0.4.2
 if ! test $(version ${WARDEN_VERSION}) -ge $(version ${WARDEN_REQUIRE}); then
   error "Warden ${WARDEN_REQUIRE} or greater is required (version ${WARDEN_VERSION} is installed)"
   INIT_ERROR=1
@@ -166,7 +166,7 @@ fi
 
 ## verify mutagen version constraint
 MUTAGEN_VERSION=$(mutagen version 2>/dev/null) || true
-MUTAGEN_REQUIRE=0.11.2
+MUTAGEN_REQUIRE=0.11.3
 if [[ $OSTYPE =~ ^darwin ]] && ! test $(version ${MUTAGEN_VERSION}) -ge $(version ${MUTAGEN_REQUIRE}); then
   error "Mutagen ${MUTAGEN_REQUIRE} or greater is required (version ${MUTAGEN_VERSION} is installed)"
   INIT_ERROR=1
