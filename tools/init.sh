@@ -44,6 +44,7 @@ REQUIRED_FILES=("${WARDEN_WEB_ROOT}/auth.json")
 DB_DUMP="${DB_DUMP:-./backfill/magento-db.sql.gz}"
 DB_IMPORT=1
 CLEAN_INSTALL=
+AUTO_PULL=1
 META_PACKAGE="magento/project-community-edition"
 META_VERSION=""
 URL_FRONT="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/"
@@ -84,16 +85,27 @@ while (( "$#" )); do
             DB_DUMP="$1"
             shift
             ;;
+        --no-pull)
+            AUTO_PULL=
+            shift
+            ;;
         -h|--help)
             echo "Usage: $(basename $0) [--skip-db-import] [--db-dump <file>.sql.gz]"
             echo ""
             echo "       --clean-install              install from scratch rather than use existing database dump;"
             echo "                                    implied when no composer.json file is present in web root" 
+            echo ""
             echo "       --meta-package               passed to 'composer create-project' when --clean-install is"
             echo "                                    specified and defaults to 'magento/project-community-edition'"
+            echo ""
             echo "       --meta-version               specify alternate version to install; defaults to latest; may"
             echo "                                    be (for example) specified as 2.3.x (latest minor) or 2.3.4"
+            echo ""
+            echo "       --no-pull                    when specified latest images will not be explicitly pulled prior"
+            echo "                                    to environment startup to facilitate use of locally built images"
+            echo ""
             echo "       --skip-db-import             skips over db import (assume db has already been imported)"
+            echo ""
             echo "       --db-dump <file>.sql.gz      expects path to .sql.gz file for import during init"
             echo ""
             exit -1
@@ -190,8 +202,12 @@ if [[ ! -f ~/.warden/ssl/certs/${TRAEFIK_DOMAIN}.crt.pem ]]; then
 fi
 
 :: Initializing environment
-warden env pull --ignore-pull-failures || true
-warden env build --pull
+if [[ $AUTO_PULL ]]; then
+  warden env pull --ignore-pull-failures || true
+  warden env build --pull
+else
+  warden env build
+fi
 warden env up -d
 
 ## wait for mariadb to start listening for connections
