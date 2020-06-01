@@ -300,6 +300,7 @@ fi
 
 :: Flushing cache
 warden env exec -T php-fpm bin/magento cache:flush
+warden env exec -T php-fpm bin/magento cache:disable block_html full_page
 
 :: Creating admin user
 ADMIN_PASS=$(warden env exec -T php-fpm pwgen -n1 16)
