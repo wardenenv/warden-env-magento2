@@ -290,12 +290,15 @@ fi
 if [[ ! ${CLEAN_INSTALL} ]]; then
   :: Configuring application
   warden env exec -T php-fpm ln -fsn env.php.warden.php app/etc/env.php
-
-  :: Updating application
-  warden env exec -T php-fpm bin/magento cache:flush
+  warden env exec -T php-fpm bin/magento cache:flush -q
   warden env exec -T php-fpm bin/magento app:config:import
-  warden env exec -T php-fpm bin/magento setup:db-schema:upgrade
-  warden env exec -T php-fpm bin/magento setup:db-data:upgrade
+
+  :: bin/magento setup:db-schema:upgrade
+  warden env exec -T php-fpm php -d memory_limit=-1 bin/magento setup:db-schema:upgrade
+
+  :: bin/magento setup:db-data:upgrade
+  warden env exec -T php-fpm php -d memory_limit=-1 bin/magento setup:db-data:upgrade
+
 fi
 
 :: Flushing cache
