@@ -178,7 +178,7 @@ fi
 
 ## verify mutagen version constraint
 MUTAGEN_VERSION=$(mutagen version 2>/dev/null) || true
-MUTAGEN_REQUIRE=0.11.3
+MUTAGEN_REQUIRE=0.11.4
 if [[ $OSTYPE =~ ^darwin ]] && ! test $(version ${MUTAGEN_VERSION}) -ge $(version ${MUTAGEN_REQUIRE}); then
   error "Mutagen ${MUTAGEN_REQUIRE} or greater is required (version ${MUTAGEN_VERSION} is installed)"
   INIT_ERROR=1
