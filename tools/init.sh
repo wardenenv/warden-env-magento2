@@ -213,11 +213,6 @@ warden env up -d
 ## wait for mariadb to start listening for connections
 warden shell -c "while ! nc -z db 3306 </dev/null; do sleep 2; done"
 
-## start sync session on macOS where Warden is too old to automatically start mutagen sync
-if [[ $OSTYPE =~ ^darwin ]] && test $(version ${WARDEN_VERSION}) -lt $(version 0.3.0); then
-  warden sync start
-fi
-
 if [[ ${CLEAN_INSTALL} ]] && [[ ! -f "${WARDEN_WEB_ROOT}/composer.json" ]]; then
   :: Installing meta-package
   warden env exec -T php-fpm composer create-project -q --no-interaction --prefer-dist --no-install \
