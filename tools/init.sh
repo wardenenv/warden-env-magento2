@@ -232,6 +232,7 @@ if [[ ${DB_IMPORT} ]]; then
 elif [[ ${CLEAN_INSTALL} ]]; then
   :: Installing application
   warden env exec -- -T php-fpm rm -vf app/etc/config.php app/etc/env.php
+  warden env exec -- -T php-fpm cp app/etc/env.php.init.php app/etc/env.php
   warden env exec -- -T php-fpm bin/magento setup:install \
       --cleanup-database \
       --backend-frontname=backend \
@@ -260,13 +261,6 @@ elif [[ ${CLEAN_INSTALL} ]]; then
       --page-cache-redis-port=6379
 
   :: Configuring application
-  warden env exec -T php-fpm php -r '
-    $env = "<?php\nreturn " . var_export(array_merge_recursive(
-      include("app/etc/env.php"),
-      include("app/etc/env.php.init.php")
-    ), true) . ";\n";
-    file_put_contents("app/etc/env.php", $env);
-  '
   warden env exec -T php-fpm cp -n app/etc/env.php app/etc/env.php.warden.php
   warden env exec -T php-fpm ln -fsn env.php.warden.php app/etc/env.php
   warden env exec -T php-fpm bin/magento app:config:import
@@ -310,6 +304,22 @@ warden env exec -T php-fpm bin/magento admin:user:create \
     --admin-firstname="Local" \
     --admin-lastname="Admin" \
     --admin-email="${ADMIN_USER}@example.com"
+
+if test $(version $(warden env exec -T php-fpm bin/magento -V | awk '{print $3}')) -ge $(version 2.4.0); then
+  TFA_SECRET=$(warden env exec -T php-fpm pwgen -A1 128)
+  TFA_SECRET=$(
+    warden env exec -T php-fpm python -c "import base64; print base64.b32encode('${TFA_SECRET}')" | sed 's/=*$//'
+  )
+  if [[ ${CLEAN_INSTALL} ]]; then
+    warden env exec -T php-fpm bin/magento config:set -q --lock-env twofactorauth/general/force_providers google
+  fi
+  warden env exec -T php-fpm bin/magento security:tfa:google:set-secret "${ADMIN_USER}" "${TFA_SECRET}"
+  printf "otpauth://totp/%s%%3Alocaladmin%%40example.com?issuer=%s&secret=%s\n\n" \
+    "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TFA_SECRET}"
+
+  printf "2FA Authenticator Codes:\n%s\n" \
+    "$(warden env exec -T php-fpm oathtool -s 30 -w 10 --totp --base32 "${TFA_SECRET}")"
+fi
 
 :: Initialization complete
 function print_install_info {
