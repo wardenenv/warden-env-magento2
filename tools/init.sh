@@ -305,20 +305,26 @@ warden env exec -T php-fpm bin/magento admin:user:create \
     --admin-lastname="Admin" \
     --admin-email="${ADMIN_USER}@example.com"
 
+OTPAUTH_QRI=
 if test $(version $(warden env exec -T php-fpm bin/magento -V | awk '{print $3}')) -ge $(version 2.4.0); then
   TFA_SECRET=$(warden env exec -T php-fpm pwgen -A1 128)
   TFA_SECRET=$(
     warden env exec -T php-fpm python -c "import base64; print base64.b32encode('${TFA_SECRET}')" | sed 's/=*$//'
   )
+  OTPAUTH_URL=$(printf "otpauth://totp/%s%%3Alocaladmin%%40example.com?issuer=%s&secret=%s" \
+    "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TFA_SECRET}"
+  )
   if [[ ${CLEAN_INSTALL} ]]; then
     warden env exec -T php-fpm bin/magento config:set -q --lock-env twofactorauth/general/force_providers google
   fi
   warden env exec -T php-fpm bin/magento security:tfa:google:set-secret "${ADMIN_USER}" "${TFA_SECRET}"
-  printf "otpauth://totp/%s%%3Alocaladmin%%40example.com?issuer=%s&secret=%s\n\n" \
-    "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TFA_SECRET}"
 
+  printf "%s\n\n" "${OTPAUTH_URL}"
   printf "2FA Authenticator Codes:\n%s\n" \
     "$(warden env exec -T php-fpm oathtool -s 30 -w 10 --totp --base32 "${TFA_SECRET}")"
+
+  warden env exec -T php-fpm segno "${OTPAUTH_URL}" -s 4 -o "pub/media/${ADMIN_USER}-totp-qr.png"
+  OTPAUTH_QRI="${URL_FRONT}media/${ADMIN_USER}-totp-qr.png?t=$(date +%s)"
 fi
 
 :: Initialization complete
@@ -326,6 +332,7 @@ function print_install_info {
     FILL=$(printf "%0.s-" {1..128})
     C1_LEN=8
     let "C2_LEN=${#URL_ADMIN}>${#ADMIN_PASS}?${#URL_ADMIN}:${#ADMIN_PASS}"
+    let "C2_LEN=${C2_LEN}>${#OTPAUTH_QRI}?${C2_LEN}:${#OTPAUTH_QRI}"
 
     # note: in CentOS bash .* isn't supported (is on Darwin), but *.* is more cross-platform
     printf "+ %*.*s + %*.*s + \n" 0 $C1_LEN $FILL 0 $C2_LEN $FILL
@@ -333,6 +340,10 @@ function print_install_info {
     printf "+ %*.*s + %*.*s + \n" 0 $C1_LEN $FILL 0 $C2_LEN $FILL
     printf "+ %-*s + %-*s + \n" $C1_LEN AdminURL $C2_LEN "$URL_ADMIN"
     printf "+ %*.*s + %*.*s + \n" 0 $C1_LEN $FILL 0 $C2_LEN $FILL
+    if [[ ${OTPAUTH_QRI} ]]; then
+      printf "+ %-*s + %-*s + \n" $C1_LEN AdminOTP $C2_LEN "$OTPAUTH_QRI"
+      printf "+ %*.*s + %*.*s + \n" 0 $C1_LEN $FILL 0 $C2_LEN $FILL
+    fi
     printf "+ %-*s + %-*s + \n" $C1_LEN Username $C2_LEN "$ADMIN_USER"
     printf "+ %*.*s + %*.*s + \n" 0 $C1_LEN $FILL 0 $C2_LEN $FILL
     printf "+ %-*s + %-*s + \n" $C1_LEN Password $C2_LEN "$ADMIN_PASS"
