@@ -62,13 +62,13 @@ return [
                     'flat_catalog_product' => '0'
                 ],
                 'search' => [
-                    'engine' => 'elasticsearch6',
+                    'engine' => 'elasticsearch7',
                     'enable_eav_indexer' => '1',
-                    'elasticsearch6_server_hostname' => 'elasticsearch',
-                    'elasticsearch6_server_port' => '9200',
-                    'elasticsearch6_index_prefix' => 'magento2',
-                    'elasticsearch6_enable_auth' => '0',
-                    'elasticsearch6_server_timeout' => '15'
+                    'elasticsearch7_server_hostname' => 'elasticsearch',
+                    'elasticsearch7_server_port' => '9200',
+                    'elasticsearch7_index_prefix' => 'magento2',
+                    'elasticsearch7_enable_auth' => '0',
+                    'elasticsearch7_server_timeout' => '15'
                 ]
             ],
             'system' => [
