@@ -17,7 +17,7 @@ Other useful URLs on DEV:
 
 ### Prerequisites:
 
-* [Warden](https://warden.dev/) 0.5.1 or later is installed. See the [Installing Warden](https://docs.warden.dev/installing.html) docs page for further info and procedures.
+* [Warden](https://warden.dev/) 0.5.2 or later is installed. See the [Installing Warden](https://docs.warden.dev/installing.html) docs page for further info and procedures.
 * `pv` is installed and available in your `$PATH` (you can install this via `brew`, `dnf`, `apt` etc)
 
 ### Initializing Environment

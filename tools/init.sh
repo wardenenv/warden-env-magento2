@@ -151,7 +151,7 @@ done
 
 ## verify warden version constraint
 WARDEN_VERSION=$(warden version 2>/dev/null) || true
-WARDEN_REQUIRE=0.5.1
+WARDEN_REQUIRE=0.5.2
 if ! test $(version ${WARDEN_VERSION}) -ge $(version ${WARDEN_REQUIRE}); then
   error "Warden ${WARDEN_REQUIRE} or greater is required (version ${WARDEN_VERSION} is installed)"
   INIT_ERROR=1
