@@ -146,7 +146,7 @@ done
 [[ ${INIT_ERROR} ]] && exit 1
 
 :: Starting Warden
-warden up
+warden svc up
 if [[ ! -f ~/.warden/ssl/certs/${TRAEFIK_DOMAIN}.crt.pem ]]; then
     warden sign-certificate ${TRAEFIK_DOMAIN}
 fi
