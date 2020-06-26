@@ -1,44 +1,21 @@
 #!/usr/bin/env bash
+[[ ! ${WARDEN_DIR} ]] && >&2 echo -e "\033[31mThis script is not intended to be run directly!\033[0m" && exit 1
 set -euo pipefail
-trap 'error "$(printf "Command \`%s\` on line $LINENO failed with exit code $?" "$BASH_COMMAND")"' ERR
-
-## setup functions for use throughout the script
-function warning {
-  >&2 printf "\033[33mWARNING\033[0m: $@\n" 
-}
-
-function error {
-  >&2 printf "\033[31mERROR\033[0m: $@\n"
-}
-
-function fatal {
-  error "$@"
-  exit -1
-}
-
-function version {
-  echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
-}
 
 function :: {
   echo
   echo "==> [$(date +%H:%M:%S)] $@"
 }
 
-## find directory above where this script is located following symlinks if neccessary
-readonly BASE_DIR="$(
-  cd "$(
-    dirname "$(
-      (readlink "${BASH_SOURCE[0]}" || echo "${BASH_SOURCE[0]}") \
-        | sed -e "s#^../#$(dirname "$(dirname "${BASH_SOURCE[0]}")")/#"
-    )"
-  )/.." >/dev/null \
-  && pwd
-)"
-cd "${BASE_DIR}"
-
 ## load configuration needed for setup
-source .env
+WARDEN_ENV_PATH="$(locateEnvPath)" || exit $?
+loadEnvConfig "${WARDEN_ENV_PATH}" || exit $?
+assertDockerRunning
+
+## change into the project directory
+cd "${WARDEN_ENV_PATH}"
+
+## configure command defaults
 WARDEN_WEB_ROOT="$(echo "${WARDEN_WEB_ROOT:-/}" | sed 's#^/#./#')"
 REQUIRED_FILES=("${WARDEN_WEB_ROOT}/auth.json")
 DB_DUMP="${DB_DUMP:-./backfill/magento-db.sql.gz}"
@@ -89,27 +66,6 @@ while (( "$#" )); do
             AUTO_PULL=
             shift
             ;;
-        -h|--help)
-            echo "Usage: $(basename $0) [--skip-db-import] [--db-dump <file>.sql.gz]"
-            echo ""
-            echo "       --clean-install              install from scratch rather than use existing database dump;"
-            echo "                                    implied when no composer.json file is present in web root" 
-            echo ""
-            echo "       --meta-package               passed to 'composer create-project' when --clean-install is"
-            echo "                                    specified and defaults to 'magento/project-community-edition'"
-            echo ""
-            echo "       --meta-version               specify alternate version to install; defaults to latest; may"
-            echo "                                    be (for example) specified as 2.3.x (latest minor) or 2.3.4"
-            echo ""
-            echo "       --no-pull                    when specified latest images will not be explicitly pulled prior"
-            echo "                                    to environment startup to facilitate use of locally built images"
-            echo ""
-            echo "       --skip-db-import             skips over db import (assume db has already been imported)"
-            echo ""
-            echo "       --db-dump <file>.sql.gz      expects path to .sql.gz file for import during init"
-            echo ""
-            exit -1
-            ;;
         *)
             error "Unrecognized argument '$1'"
             exit -1
@@ -151,16 +107,10 @@ done
 
 ## verify warden version constraint
 WARDEN_VERSION=$(warden version 2>/dev/null) || true
-WARDEN_REQUIRE=0.5.2
+WARDEN_REQUIRE=0.6.0
 if ! test $(version ${WARDEN_VERSION}) -ge $(version ${WARDEN_REQUIRE}); then
   error "Warden ${WARDEN_REQUIRE} or greater is required (version ${WARDEN_VERSION} is installed)"
   INIT_ERROR=1
-fi
-
-## verify docker is running
-if ! docker system info >/dev/null 2>&1; then
-    error "Docker does not appear to be running. Please start Docker."
-    INIT_ERROR=1
 fi
 
 ## copy global Marketplace credentials into webroot to satisfy REQUIRED_FILES list; in ideal
