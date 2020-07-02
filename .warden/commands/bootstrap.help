@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+[[ ! ${WARDEN_DIR} ]] && >&2 echo -e "\033[31mThis script is not intended to be run directly!\033[0m" && exit 1
+
+WARDEN_USAGE=$(cat <<EOF
+\033[33mUsage:\033[0m
+  bootstrap [--skip-db-import] [--db-dump <file>.sql.gz]
+
+\033[33mOptions:\033[0m
+  -h, --help        Display this help menu
+
+  --clean-install   install from scratch rather than use existing database dump;
+                    implied when no composer.json file is present in web root
+
+  --meta-package    passed to 'composer create-project' when --clean-install is
+                    specified and defaults to 'magento/project-community-edition'
+
+  --meta-version    specify alternate version to install; defaults to latest; may
+                    be (for example) specified as 2.3.x (latest minor) or 2.3.4
+
+  --no-pull         when specified latest images will not be explicitly pulled prior
+                    to environment startup to facilitate use of locally built images
+
+  --skip-db-import  skips over db import (assume db has already been imported)
+
+\033[33mArguments:\033[0m
+
+  --db-dump <file>.sql.gz      expects path to .sql.gz file for import during init
+
+EOF
+)

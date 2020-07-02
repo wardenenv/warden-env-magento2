@@ -17,7 +17,7 @@ Other useful URLs on DEV:
 
 ### Prerequisites:
 
-* [Warden](https://warden.dev/) 0.5.2 or later is installed. See the [Installing Warden](https://docs.warden.dev/installing.html) docs page for further info and procedures.
+* [Warden](https://warden.dev/) 0.6.0 or later is installed. See the [Installing Warden](https://docs.warden.dev/installing.html) docs page for further info and procedures.
 * `pv` is installed and available in your `$PATH` (you can install this via `brew`, `dnf`, `apt` etc)
 
 ### Initializing Environment
@@ -50,7 +50,7 @@ In the below examples `~/Sites/exampleproject` is used as the path. Simply repla
 
  4. Run the init script to bootstrap the environment, starting the containers and mutagen sync (on macOS), installing the database (or importing if `--db-dump` is specified), and creating the local admin user for accessing the Magento backend.
 
-        ./tools/init.sh --clean-install
+        warden bootstrap --clean-install
 
  5. Load the site in your browser using the links and credentials taken from the init script output. 
 
