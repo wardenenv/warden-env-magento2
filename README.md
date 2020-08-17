@@ -9,7 +9,7 @@
 
 Other useful URLs on DEV:
 
-* https://mailhog.exampleproject.test/
+* https://mailhog.warden.test/
 * https://rabbitmq.exampleproject.test/
 * https://elasticsearch.exampleproject.test/
 
