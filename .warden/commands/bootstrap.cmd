@@ -26,6 +26,9 @@ META_PACKAGE="magento/project-community-edition"
 META_VERSION=""
 URL_FRONT="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/"
 URL_ADMIN="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/backend/"
+SERVICE_RABBITMQ=1
+SERVICE_REDIS=1
+SERVICE_VARNISH=1
 
 ## argument parsing
 ## parse arguments
@@ -60,6 +63,21 @@ while (( "$#" )); do
         --db-dump)
             shift
             DB_DUMP="$1"
+            shift
+            ;;
+        --service-rabbitmq)
+            shift
+            SERVICE_RABBITMQ="$1"
+            shift
+            ;;
+        --service-redis)
+            shift            
+            SERVICE_REDIS="$1"
+            shift
+            ;;
+        --service-varnish)
+            shift
+            SERVICE_VARNISH="$1"
             shift
             ;;
         --no-pull)
@@ -180,35 +198,52 @@ if [[ ${DB_IMPORT} ]]; then
   warden db connect -e 'drop database magento; create database magento;'
   pv "${DB_DUMP}" | gunzip -c | warden db import
 elif [[ ${CLEAN_INSTALL} ]]; then
+  
+  INSTALL_FLAGS=""
+
+  ## rabbitmq
+  if [[ ${SERVICE_RABBITMQ} == 1 ]]; then
+    INSTALL_FLAGS="${INSTALL_FLAGS} --amqp-host=rabbitmq
+      --amqp-port=5672
+      --amqp-user=guest 
+      --amqp-password=guest 
+      --consumers-wait-for-messages=0 "
+  fi
+  
+  ## redis
+  if [[ ${SERVICE_REDIS} == 1 ]]; then
+    INSTALL_FLAGS="${INSTALL_FLAGS} --session-save=redis
+      --session-save-redis-host=redis
+      --session-save-redis-port=6379
+      --session-save-redis-db=2
+      --session-save-redis-max-concurrency=20
+      --cache-backend=redis
+      --cache-backend-redis-server=redis
+      --cache-backend-redis-db=0
+      --cache-backend-redis-port=6379
+      --page-cache=redis
+      --page-cache-redis-server=redis
+      --page-cache-redis-db=1
+      --page-cache-redis-port=6379 "
+  fi
+
+  ## varnish
+  if [[ ${SERVICE_VARNISH} == 1 ]]; then
+    INSTALL_FLAGS="${INSTALL_FLAGS} --http-cache-hosts=varnish:80 "
+  fi
+
+  INSTALL_FLAGS="${INSTALL_FLAGS} \
+    --cleanup-database \
+    --backend-frontname=backend \
+    --db-host=db \
+    --db-name=magento \
+    --db-user=magento \
+    --db-password=magento"
+
   :: Installing application
   warden env exec -- -T php-fpm rm -vf app/etc/config.php app/etc/env.php
   warden env exec -- -T php-fpm cp app/etc/env.php.init.php app/etc/env.php
-  warden env exec -- -T php-fpm bin/magento setup:install \
-      --cleanup-database \
-      --backend-frontname=backend \
-      --amqp-host=rabbitmq \
-      --amqp-port=5672 \
-      --amqp-user=guest \
-      --amqp-password=guest \
-      --consumers-wait-for-messages=0 \
-      --db-host=db \
-      --db-name=magento \
-      --db-user=magento \
-      --db-password=magento \
-      --http-cache-hosts=varnish:80 \
-      --session-save=redis \
-      --session-save-redis-host=redis \
-      --session-save-redis-port=6379 \
-      --session-save-redis-db=2 \
-      --session-save-redis-max-concurrency=20 \
-      --cache-backend=redis \
-      --cache-backend-redis-server=redis \
-      --cache-backend-redis-db=0 \
-      --cache-backend-redis-port=6379 \
-      --page-cache=redis \
-      --page-cache-redis-server=redis \
-      --page-cache-redis-db=1 \
-      --page-cache-redis-port=6379
+  warden env exec -- -T php-fpm bin/magento setup:install $(echo ${INSTALL_FLAGS})
 
   :: Configuring application
   warden env exec -T php-fpm cp -n app/etc/env.php app/etc/env.php.warden.php
