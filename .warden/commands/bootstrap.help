@@ -21,12 +21,6 @@ WARDEN_USAGE=$(cat <<EOF
                     to environment startup to facilitate use of locally built images
 
   --skip-db-import  skips over db import (assume db has already been imported)
-  
-  --service-rabbitmq    use RabbitMQ for message queue service. value 0, 1 default is 1
-  
-  --service-redis   use Redis for backend, page and session cache. value 0, 1 default is 1
-  
-  --service-varnish use Varnish service for http cache. value 0, 1 default is 1
 
 \033[33mArguments:\033[0m
 

@@ -10,6 +10,7 @@ function :: {
 ## load configuration needed for setup
 WARDEN_ENV_PATH="$(locateEnvPath)" || exit $?
 loadEnvConfig "${WARDEN_ENV_PATH}" || exit $?
+
 assertDockerRunning
 
 ## change into the project directory
@@ -26,9 +27,6 @@ META_PACKAGE="magento/project-community-edition"
 META_VERSION=""
 URL_FRONT="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/"
 URL_ADMIN="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/backend/"
-SERVICE_RABBITMQ=1
-SERVICE_REDIS=1
-SERVICE_VARNISH=1
 
 ## argument parsing
 ## parse arguments
@@ -63,21 +61,6 @@ while (( "$#" )); do
         --db-dump)
             shift
             DB_DUMP="$1"
-            shift
-            ;;
-        --service-rabbitmq)
-            shift
-            SERVICE_RABBITMQ="$1"
-            shift
-            ;;
-        --service-redis)
-            shift            
-            SERVICE_REDIS="$1"
-            shift
-            ;;
-        --service-varnish)
-            shift
-            SERVICE_VARNISH="$1"
             shift
             ;;
         --no-pull)
@@ -202,7 +185,7 @@ elif [[ ${CLEAN_INSTALL} ]]; then
   INSTALL_FLAGS=""
 
   ## rabbitmq
-  if [[ ${SERVICE_RABBITMQ} == 1 ]]; then
+  if [[ ${WARDEN_RABBITMQ} == 1 ]]; then
     INSTALL_FLAGS="${INSTALL_FLAGS} --amqp-host=rabbitmq
       --amqp-port=5672
       --amqp-user=guest 
@@ -211,7 +194,7 @@ elif [[ ${CLEAN_INSTALL} ]]; then
   fi
   
   ## redis
-  if [[ ${SERVICE_REDIS} == 1 ]]; then
+  if [[ ${WARDEN_REDIS} == 1 ]]; then
     INSTALL_FLAGS="${INSTALL_FLAGS} --session-save=redis
       --session-save-redis-host=redis
       --session-save-redis-port=6379
@@ -228,7 +211,7 @@ elif [[ ${CLEAN_INSTALL} ]]; then
   fi
 
   ## varnish
-  if [[ ${SERVICE_VARNISH} == 1 ]]; then
+  if [[ ${WARDEN_VARNISH} == 1 ]]; then
     INSTALL_FLAGS="${INSTALL_FLAGS} --http-cache-hosts=varnish:80 "
   fi
 
