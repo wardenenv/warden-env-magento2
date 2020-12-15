@@ -181,7 +181,7 @@ if [[ ${DB_IMPORT} ]]; then
   pv "${DB_DUMP}" | gunzip -c | warden db import
 elif [[ ${CLEAN_INSTALL} ]]; then
   :: Installing application
-  warden env exec -- -T php-fpm rm -vf app/etc/config.php app/etc/env.php
+  warden env exec -- -T php-fpm rm -vf app/etc/config.php app/etc/env.php app/etc/env.php.warden.php
   warden env exec -- -T php-fpm cp app/etc/env.php.init.php app/etc/env.php
   warden env exec -- -T php-fpm bin/magento setup:install \
       --cleanup-database \
