@@ -224,7 +224,7 @@ elif [[ ${CLEAN_INSTALL} ]]; then
     --db-password=magento"
 
   :: Installing application
-  warden env exec -- -T php-fpm rm -vf app/etc/config.php app/etc/env.php
+  warden env exec -- -T php-fpm rm -vf app/etc/config.php app/etc/env.php app/etc/env.php.warden.php
   warden env exec -- -T php-fpm cp app/etc/env.php.init.php app/etc/env.php
   warden env exec -- -T php-fpm bin/magento setup:install $(echo ${INSTALL_FLAGS})
 
