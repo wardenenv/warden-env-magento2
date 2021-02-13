@@ -172,7 +172,8 @@ if [[ ${CLEAN_INSTALL} ]] && [[ ! -f "${WARDEN_WEB_ROOT}/composer.json" ]]; then
 fi
 
 :: Installing dependencies
-warden env exec -T php-fpm composer global require hirak/prestissimo
+warden env exec -T php-fpm bash \
+  -c '[[ $(composer -V | cut -d\  -f3 | cut -d. -f1) == 2 ]] || composer global require hirak/prestissimo'
 warden env exec -T php-fpm composer install
 
 ## import database only if --skip-db-import is not specified
