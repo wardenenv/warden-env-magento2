@@ -15,7 +15,6 @@ node_modules
 !/webroot/app/design
 /webroot/app/design/adminhtml/Magento
 /webroot/app/design/frontend/Magento
-/webroot/app/etc/*
 !/webroot/app/etc/config.php
 !/webroot/app/etc/env.php.warden.php
 !/webroot/app/etc/env.php.init.php
