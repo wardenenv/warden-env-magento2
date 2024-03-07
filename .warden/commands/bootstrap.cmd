@@ -18,7 +18,7 @@ cd "${WARDEN_ENV_PATH}"
 
 ## configure command defaults
 WARDEN_WEB_ROOT="$(echo "${WARDEN_WEB_ROOT:-/}" | sed 's#^/#./#')"
-REQUIRED_FILES=("${WARDEN_WEB_ROOT}/auth.json")
+REQUIRED_FILES=()
 DB_DUMP="${DB_DUMP:-./backfill/magento-db.sql.gz}"
 DB_IMPORT=1
 CLEAN_INSTALL=
@@ -26,7 +26,7 @@ AUTO_PULL=1
 META_PACKAGE="magento/project-community-edition"
 META_VERSION=""
 URL_FRONT="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/"
-URL_ADMIN="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/backend/"
+URL_ADMIN="https://${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}/admin/"
 
 ## argument parsing
 ## parse arguments
@@ -161,19 +161,40 @@ else
 fi
 warden env up -d
 
+# If neither global nor local exists, prompt for creds
+if [[ ! -f "${WARDEN_WEB_ROOT}/auth.json" ]]; then
+    # Prompt for creds
+    read -p "No existing composer credentials were found.  Would you like to configure them? [y/N] " willManuallyInputCreds
+    if [[ "$willManuallyInputCreds" =~ ^([yY][eE][sS]|[yY1])$ ]]; then
+        read -p "Public Key: " composerPublicKey
+        read -p "Private Key: " composerPrivateKey
+
+        hadToCreateComposerJson=0
+        if [[ ! -f "${WARDEN_WEB_ROOT}/composer.json" ]]; then
+            hadToCreateComposerJson=1
+            # Temporary workaround for auth requiring composer.json file
+            echo "{}" > "${WARDEN_WEB_ROOT}/composer.json"
+            sleep 1 # Give a second to sync
+        fi
+        warden env exec -T php-fpm composer config http-basic.repo.magento.com "$composerPublicKey" "$composerPrivateKey"
+        if [[ ${hadToCreateComposerJson} == 1 ]]; then
+            rm ${WARDEN_WEB_ROOT}/composer.json
+            sleep 1 # Give a second to sync
+        fi
+    fi
+fi
+
 ## wait for mariadb to start listening for connections
 warden shell -c "while ! nc -z db 3306 </dev/null; do sleep 2; done"
 
 if [[ ${CLEAN_INSTALL} ]] && [[ ! -f "${WARDEN_WEB_ROOT}/composer.json" ]]; then
   :: Installing meta-package
-  warden env exec -T php-fpm composer create-project -q --no-interaction --prefer-dist --no-install \
-      --repository-url=https://repo.magento.com/ "${META_PACKAGE}" /tmp/create-project "${META_VERSION}"
+  # Was having a weird issue here where auth.json just would not work, kept getting 404.  COMPOSER_AUTH export is workaround
+  warden env exec -T php-fpm /bin/bash -c "export COMPOSER_AUTH=\"\$(cat auth.json)\" && composer create-project -q --no-interaction --prefer-dist --no-install --repository=https://repo.magento.com/ \"${META_PACKAGE}\" /tmp/create-project \"${META_VERSION}\""
   warden env exec -T php-fpm rsync -a /tmp/create-project/ /var/www/html/
 fi
 
 :: Installing dependencies
-warden env exec -T php-fpm bash \
-  -c '[[ $(composer -V | cut -d\  -f3 | cut -d. -f1) == 2 ]] || composer global require hirak/prestissimo'
 warden env exec -T php-fpm composer install
 
 ## import database only if --skip-db-import is not specified
@@ -278,7 +299,7 @@ OTPAUTH_QRI=
 if test $(version $(warden env exec -T php-fpm bin/magento -V | awk '{print $3}')) -ge $(version 2.4.0); then
   TFA_SECRET=$(warden env exec -T php-fpm pwgen -A1 128)
   TFA_SECRET=$(
-    warden env exec -T php-fpm python -c "import base64; print base64.b32encode('${TFA_SECRET}')" | sed 's/=*$//'
+    warden env exec -T php-fpm python3 -c "import base64; print(base64.b32encode(bytearray('${TFA_SECRET}', 'ascii')).decode('utf-8'))" | sed 's/=*$//'
   )
   OTPAUTH_URL=$(printf "otpauth://totp/%s%%3Alocaladmin%%40example.com?issuer=%s&secret=%s" \
     "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TRAEFIK_SUBDOMAIN}.${TRAEFIK_DOMAIN}" "${TFA_SECRET}"
